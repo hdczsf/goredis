@@ -311,6 +311,11 @@ func (p *connPool) Put(c *connection) {
 		p.mutex.Unlock()
 		return
 	}
+	if _,err:=c.Conn.Write([]byte{0}),err!=nil{
+		c.Conn.Close()
+		p.mutex.Unlock()
+		return nil
+	}
 	if p.idle.Len() >= p.MaxIdle {
 		p.idle.Remove(p.idle.Front())
 	}
