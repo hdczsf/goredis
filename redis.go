@@ -82,7 +82,6 @@ import (
 	"bufio"
 	"container/list"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"net/url"
