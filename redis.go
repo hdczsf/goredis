@@ -82,6 +82,7 @@ import (
 	"bufio"
 	"container/list"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/url"
@@ -286,6 +287,7 @@ func (p *connPool) Close() {
 
 func (p *connPool) Get() (*connection, error) {
 	p.mutex.Lock()
+
 	if p.closed {
 		p.mutex.Unlock()
 		return nil, errors.New("connection pool closed")
@@ -311,11 +313,11 @@ func (p *connPool) Put(c *connection) {
 		p.mutex.Unlock()
 		return
 	}
-	if _, err := c.Conn.Write([]byte{0}); err != nil {
-		c.Conn.Close()
-		p.mutex.Unlock()
-		return
-	}
+	//if _, err := c.Conn.Write([]byte{1}); err != nil {
+	//	//c.Conn.Close()
+	//	p.mutex.Unlock()
+	//	return
+	//}
 	if p.idle.Len() >= p.MaxIdle {
 		p.idle.Remove(p.idle.Front())
 	}
