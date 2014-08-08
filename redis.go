@@ -195,10 +195,12 @@ func (c *connection) SendCommand(args ...interface{}) error {
 
 func (c *connection) RecvReply() (*Reply, error) {
 	line, err := c.Reader.ReadBytes('\n')
+
 	if err != nil {
 		return nil, err
 	}
 	line = line[:len(line)-2]
+
 	switch line[0] {
 	case '-':
 		return &Reply{
@@ -341,7 +343,11 @@ func (r *Redis) ExecuteCommand(args ...interface{}) (*Reply, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() { r.pool.Put(c) }()
+	defer func() {
+		if err == nil {
+			r.pool.Put(c)
+		}
+	}()
 	if err := c.SendCommand(args...); err != nil {
 		if err != io.EOF {
 			return nil, err
@@ -382,9 +388,11 @@ func (r *Redis) dialConnection() (*connection, error) {
 			return nil, err
 		}
 		rp, err := c.RecvReply()
+
 		if err != nil {
 			return nil, err
 		}
+
 		if rp.Type == ErrorReply {
 			return nil, errors.New(rp.Error)
 		}
@@ -436,6 +444,7 @@ type DialConfig struct {
 
 // Dial new a redis client with DialConfig
 func Dial(cfg *DialConfig) (*Redis, error) {
+
 	if cfg == nil {
 		cfg = &DialConfig{}
 	}
@@ -463,6 +472,7 @@ func Dial(cfg *DialConfig) (*Redis, error) {
 		Dial:    r.dialConnection,
 		idle:    list.New(),
 	}
+
 	conn, err := r.dialConnection()
 	if err != nil {
 		return nil, err
@@ -487,14 +497,30 @@ func DialURL(rawurl string) (*Redis, error) {
 	if err != nil {
 		return nil, err
 	}
-	timeout, err := time.ParseDuration(ul.Query().Get("timeout"))
-	if err != nil {
-		return nil, err
+
+	timeoutStr := ul.Query().Get("timeout")
+	var timeout time.Duration
+	if len(timeoutStr) == 0 {
+		timeout = DefaultTimeout
+	} else {
+		timeout, err = time.ParseDuration(timeoutStr)
+		if err != nil {
+			return nil, err
+		}
 	}
-	maxidle, err := strconv.Atoi(ul.Query().Get("maxidle"))
-	if err != nil {
-		return nil, err
+
+	maxidleStr := ul.Query().Get("maxidle")
+	var maxidle int
+	if len(maxidleStr) == 0 {
+		maxidle = DefaultMaxIdle
+	} else {
+		maxidle, err = strconv.Atoi(maxidleStr)
+
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	return Dial(&DialConfig{ul.Scheme, ul.Host, db, password, timeout, maxidle})
 }
 
