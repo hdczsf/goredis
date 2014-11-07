@@ -33,7 +33,10 @@ func (r *Redis) Transaction() (*Transaction, error) {
 
 // Close closes the transaction, put the under connection back for reuse
 func (t *Transaction) Close() {
-	t.redis.pool.Put(t.conn)
+	if t.redis.Ping() == nil {
+		t.redis.pool.Put(t.conn)
+	}
+
 }
 
 // Discard flushes all previously queued commands in a transaction

@@ -288,7 +288,6 @@ func (p *connPool) Close() {
 
 func (p *connPool) Get() (*connection, error) {
 	p.mutex.Lock()
-
 	if p.closed {
 		p.mutex.Unlock()
 		return nil, errors.New("connection pool closed")
@@ -304,7 +303,9 @@ func (p *connPool) Get() (*connection, error) {
 }
 
 func (p *connPool) Put(c *connection) {
+
 	p.mutex.Lock()
+
 	if c == nil {
 		p.mutex.Unlock()
 		return
@@ -314,11 +315,7 @@ func (p *connPool) Put(c *connection) {
 		p.mutex.Unlock()
 		return
 	}
-	//if _, err := c.Conn.Write([]byte{1}); err != nil {
-	//	//c.Conn.Close()
-	//	p.mutex.Unlock()
-	//	return
-	//}
+
 	if p.idle.Len() >= p.MaxIdle {
 		p.idle.Remove(p.idle.Front())
 	}
@@ -343,11 +340,6 @@ func (r *Redis) ExecuteCommand(args ...interface{}) (*Reply, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err == nil {
-			r.pool.Put(c)
-		}
-	}()
 	if err := c.SendCommand(args...); err != nil {
 		if err != io.EOF {
 			return nil, err
@@ -374,10 +366,12 @@ func (r *Redis) ExecuteCommand(args ...interface{}) (*Reply, error) {
 		}
 		return c.RecvReply()
 	}
+	r.pool.Put(c)
 	return rp, err
 }
 
 func (r *Redis) dialConnection() (*connection, error) {
+
 	conn, err := net.DialTimeout(r.network, r.address, r.timeout)
 	if err != nil {
 		return nil, err
@@ -654,6 +648,42 @@ func (rp *Reply) HashValue() (map[string]string, error) {
 	}
 	return result, nil
 }
+
+//func (rp *Reply) HashValue() (map[string]interface{}, error) {
+//	if rp.Type == ErrorReply {
+//		return nil, errors.New(rp.Error)
+//	}
+//	if rp.Type != MultiReply {
+//		return nil, errors.New("invalid reply type, not multi bulk")
+//	}
+//	result := make(map[string]interface{})
+//	if rp.Multi != nil {
+//		length := len(rp.Multi)
+//		for i := 0; i < length/2; i++ {
+//			key, err := rp.Multi[i*2].StringValue()
+//			if err != nil {
+//				return nil, err
+//			}
+//			rpy := rp.Multi[i*2+1]
+//			value, err := rpy.StringValue()
+//			if err != nil {
+//				if rpy.Type == MultiReply {
+//					mv, err := rpy.HashValue()
+//					if err != nil {
+//						return nil, err
+//					}
+//					result[key] = mv
+//				} else {
+//					return nil, errors.New("invalid reply type, not multi bulk:key=" + key + ",Type=" + strconv.Itoa(rpy.Type))
+//				}
+//			} else {
+//				result[key] = value
+//			}
+
+//		}
+//	}
+//	return result, nil
+//}
 
 // ListValue indicates redis reply a multi value which represent list
 func (rp *Reply) ListValue() ([]string, error) {

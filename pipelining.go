@@ -22,8 +22,11 @@ func (r *Redis) Pipelining() (*Pipelined, error) {
 
 // Close closes current pipeline mode.
 func (p *Pipelined) Close() {
-	p.redis.pool.Put(p.conn)
-	p.times = 0
+	if p.redis.Ping() == nil {
+		p.redis.pool.Put(p.conn)
+		p.times = 0
+	}
+
 }
 
 // Command send raw redis command and do not wait for response.
