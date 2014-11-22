@@ -452,7 +452,7 @@ func Dial(cfg *DialConfig) (*Redis, error) {
 	}
 	r := &Redis{
 		network:  cfg.Network,
-		address:  strings.Replace(cfg.Address, "-", "/"),
+		address:  strings.Replace(cfg.Address, "-", "/", -1),
 		db:       cfg.Database,
 		password: cfg.Password,
 		timeout:  cfg.Timeout,
